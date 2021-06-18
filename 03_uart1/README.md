@@ -1,34 +1,50 @@
-Tutorial 03 - UART1, Auxilary mini UART
-=======================================
+# チュートリアル 03 - UART1, mini UART
 
-It is time for the famous Hello World example. We're going to write on the UART1 first, as it's easier to program
-as it has a fixed clocked frequency.
+有名な"Hello World"の時間です。まずUART1について説明します。UART1はクロック周波数が
+固定されており、プログラムしやすいからです。 UART1
 
-NOTE: qemu does not redirect UART1 to terminal by default, only UART0, so you have to use `-serial null -serial stdio`.
+注: qemuはデフォルトではUART1をターミナルにリダイレクトしません。リダイレクトするのは
+UART0だけです。そのため、`-serial null -serial stdio`を使用する必要があります。
 
-Gpio.h
-------
+## gpio.h
 
-We have a new header file. This defines the base MMIO address, and the GPIO controller's addresses. This file
-going to be very popular, as many devices need it.
+新たにヘッダファイルを用意しました。このファイルはMMIOのベースアドレスとGPIOコントローラの
+アドレスを定義しています。このファイルは多くのデバイスが必要とするため非常に人気のある
+ファイルになるでしょう。
 
-Uart.h, uart.c
---------------
+## uart.h, uart.c
 
-A very minimal implementation.
+必要最小限の実装です。
 
-`uart_init()` initializes the device and maps it to the GPIO ports.
+`uart_init()`はデバイスを初期化し、GPIOポートにマッピングします。
 
-`uart_send(c)` sends a character over the serial line.
+`uart_send(c)`はシリアルラインを通じて文字を送信します。
 
-`uart_getc()` receives a character. The carrige return character (13) will be converted into a newline character (10).
+`uart_getc()`は文字を受信します。復帰文字(13)は改行文字(10)に変換されます。
 
-`uart_puts(s)` prints out a string. On newline, a carrige return character will also be sent (13 + 10).
+`uart_puts(s)`は文字列をプリントアウトします。改行文字については復帰文字も
+送信されます（13 + 10）。
 
-Main
-----
+## main
 
-First, we have to call the uart initialization code. Then, it'll return "Hello World!". If you've purchased an USB
-serial cable, you should see it on minicom's screen. After that every character typed in minicom will be
-echoed back. If you haven't turned off local echo, that means you'll see every pressed key twice.
+まず、uartの初期化コードを呼び出す必要があります。次いで"Hello World!"を返します。
+USBシリアルケーブルを購入していれば、minicomの画面に表示されるはずです。その後は
+minicomに入力されたすべての文字がエコーバックされます。ローカルエコーをオフにして
+いないと、押したキーを2回見ることになります。
 
+## 実行結果
+
+```
+$ make
+rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c start.S -o start.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c main.c -o main.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c uart.c -o uart.o
+aarch64-none-elf-ld -nostdlib -nostartfiles start.o main.o uart.o -T link.ld -o kernel8.elf
+aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+
+$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial null -serial stdio
+Hello World!
+abcdf qemu-system-aarch64: terminating on signal 2 from pid 999 (<unknown process>)
+```
