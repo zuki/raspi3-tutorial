@@ -41,6 +41,8 @@ extern volatile unsigned int mbox[36];
 
 /* tags */
 #define MBOX_TAG_GETSERIAL      0x10004
+#define MBOX_TAG_GETMODEL       0x10001
+#define MBOX_TAG_GETMEMORY      0x10006
 #define MBOX_TAG_LAST           0
 
 int mbox_call(unsigned char ch);
