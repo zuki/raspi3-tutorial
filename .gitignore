@@ -1,0 +1,12 @@
+backup/*
+src/*/build
+**/*.o
+**/*.d
+**/*.swp
+**/*.img
+**/*.elf
+# gnu global files
+GPATH
+GRTAGS
+GSYMS
+GTAGS
