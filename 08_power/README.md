@@ -1,25 +1,55 @@
-Tutorial 08 - Power management
-==============================
+# チュートリアル 08 - 電源管理
 
-For embedded systems, power consumption is critical. The Raspberry Pi 3 has a very sophisticated
-PM interface. You can turn each device on and off idependently. There's a catch though, the GPIO
-VCC pins are hardwired, there's no way to turn them off programatically. This means if you connect
-some devices to them, you'll have to implement a way to turn those devices off (with a transistor
-connected to a data GPIO pin for example).
+組み込みシステムにとって消費電力は非常に重要です。Raspberry Pi 3は
+非常に洗練された電源管理インタフェースを持っています。各デバイスを
+個別にオン/オフできます。ただし、これには罠があります。GPIO VCCピンは
+ハードワイヤリングされているのでプログラムでオフにすることができません。
+つまり、GPIO VCCピンに何らかのデバイスを接続する場合、それらのデバイスを
+オフにする方法を実装する必要があります（たとえば、データGPIOピンにトラン
+ジスタを接続するなど）。
 
-Power.h, power.c
-----------------
+## power.h, power.c
 
-The power management controller is one of the peripherals that are not emulated properly by qemu.
-Works on real hardware though.
+電源管理コントローラはqemuで正しくエミュレートされないペリフェラルの一つです。
+しかし、実際のハードウェアでは動作します。
 
-`power_off()` shutdowns the board to a almost zero power consumption state.
+`power_off()`はボードをシャットダウンして消費電力をほぼゼロにします。
 
-`reset()` reboots the machine. Also handled by the PMC, and since the Raspberry Pi does not have
-a hardware reset button, it's very useful.
+`reset()`はマシンを再起動します。これもPMCが処理します。Raspberry Piには
+ハードウェアリセットボタンがないので、非常に便利です。
 
-Main
-----
+## main
 
-We display a simple menu, and wait for user input. Depending on the input, we reboot the system or
-power it off.
+簡単なメニューを表示してユーザの入力を待ちます。入力に応じて、システムの再起動、
+または、電源切断をします。
+
+## 実行結果
+
+```
+$ make
+rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c start.S -o start.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c delays.c -o delays.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c main.c -o main.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c mbox.c -o mbox.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c power.c -o power.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c uart.c -o uart.o
+aarch64-none-elf-ld -nostdlib -nostartfiles start.o delays.o main.o mbox.o power.o uart.o -T link.ld -o kernel8.elf
+aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+
+$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+ 1 - power off
+ 2 - reset
+Choose one: 1
+
+ 1 - power off
+ 2 - reset
+Choose one: 2
+
+ 1 - power off
+ 2 - reset
+Choose one:
+```
+
+**注** 記述どおり、qemuではpower offもresetも効かない。
