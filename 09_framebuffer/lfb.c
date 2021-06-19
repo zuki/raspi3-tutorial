@@ -111,6 +111,6 @@ void lfb_showpicture()
             *((unsigned int*)ptr)=isrgb ? *((unsigned int *)&pixel) : (unsigned int)(pixel[0]<<16 | pixel[1]<<8 | pixel[2]);
             ptr+=4;
         }
-        ptr+=pitch-homer_width*4;
+        ptr+=pitch-homer_width*4;   // 画像がない分を補正
     }
 }
