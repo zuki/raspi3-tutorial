@@ -1,41 +1,43 @@
-Tutorial 0A - PC Screen Font
-============================
+# チュートリアル 0A - PCスクリーンフォント
 
-Drawing pixmaps is fun, but definitely there's a need to display characters as well. Basicaly fonts
-are nothing more than bitmaps for each character. For this tutorial I choosed PC Screen Font format,
-the same Linux Console uses.
+pixmapsを描くのも楽しいですが、やはり文字を表示する必要があります。基本的に
+フォントは各文字のビットマップでしかありません。このチュートリアルでは
+Linuxコンソールで使用されているものと同じPCスクリーンフォント形式を選択しました。
 
-UPDATE: because I had many requests, I've added demonstration on how to print UTF-8 strings.
+更新: リクエストが多かったので、UTF-8文字列を表示する方法のデモを追加しました。
 
-Lfb.h, lfb.c
-------------
+## lfb.h, lfb.c
 
-`lfb_init()` sets up resolution, depth, and color channel order. Also queries framebuffer's address.
 
-`lfb_print(x,y,s)` displays a string on screen with fixed-sized glyphs using PSF.
+`lfb_init()`は、解像度、深度、カラーチャネル順（RGBかBGBか）を設定します。また、
+フレームバッファのアドレスを問い合わせます。
 
-`lfb_proprint(x,y,s)` displays a string on screen with proportional SSFN font.
+`lfb_print(x,y,s)`は、PSFフォントを使って固定サイズのグリフでスクリーンに文字列を
+表示します。
 
-Font.psf
---------
+`lfb_proprint(x,y,s)`は、プロポーショナルなSSFNフォントを使ってスクリーンに文字列を
+表示します。
 
-The font file. Use any file from /usr/share/kbd/consolefonts. Unicode table is not supported. Translating
-characters to glyph index using that table (instead of one-to-one relation) is a homework for you. This font
-is generated from the original IBM PC VGA 8x16 Font ROM, and includes 127 glyphs.
+## font.psf
 
-Font.sfn
---------
+フォントファイルです。/usr/share/kbd/consolefontsから任意のファイルを使用してください。
+Unicodeテーブルには対応していません。（一対一の関係ではなく）テーブルを使って文字を
+グリフインデックスに変換するのはあなたへの宿題です。このフォントは、オリジナルの
+IBM PC VGA 8x16 フォント ROMから生成されたもので127 のグリフを含んでいます。
 
-One of the biggest drawbacks of PSF that it does not store glyph metrics. To support UTF-8 strings, you will
-need proportional fonts (that is, 8x16 bitmaps for Latin script and 16x16 for CJK glyphs for example). So I've
-added a demonstration on how to use [Scalable Screen Font](https://gitlab.com/bztsrc/scalable-font2) to
-overcome this. More information, example fonts and font converter can be found in the SSFN repository.
+## font.sfn
 
-Makefile
---------
+PSFの最大の欠点の一つはグリフのメトリクスを保存しないことです。UTF-8文字列をサポート
+するにはプロポーショナルフォントが必要になります(たとえば、ラテン文字には8x16ビットマップ、
+CJKグリフには16x16ビットマップなど)。そこで、これに対応するために[スケーラブルスクリーンフォント](https://gitlab.com/bztsrc/scalable-font2)を
+使用する方法のデモを追加しました。より詳しい情報、サンプルフォント、フォントコンバータは
+SSFNリポジトリにあります。
 
-I've added two object files, generated from the psf and sfn fonts. It's a good example of how to
-include and reference a binary file in C. I've used the following command to find out the label:
+## Makefile
+
+psfフォントとsfnフォントから生成される2つのオブジェクトファイルを追加しました。これは
+C言語でバイナリファイルをインクルード・参照する方法を示す良い例です。ラベルを
+調べるために以下のコマンドを使いました。
 
 ```sh
 $ aarch64-elf-readelf -s font_psf.o
@@ -45,7 +47,33 @@ $ aarch64-elf-readelf -s font_psf.o
      4: 0000000000000820     0 NOTYPE  GLOBAL DEFAULT  ABS _binary_font_psf_size
 ```
 
-Main
-----
+## main
 
-Very simple. We set the resolution and display the string. First with PSF, and then with SSFN.
+非常にシンプルです。解像度を設定して、最初はPSFフォンで、次いでSSFNフォントで
+文字列を表示します。
+
+## 実行結果
+
+```
+$ make
+rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c start.S -o start.o
+aarch64-none-elf-ld -r -b binary -o font_psf.o font.psf
+aarch64-none-elf-ld -r -b binary -o font_sfn.o font.sfn
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c delays.c -o delays.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c lfb.c -o lfb.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c main.c -o main.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c mbox.c -o mbox.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c uart.c -o uart.o
+aarch64-none-elf-ld -nostdlib -nostartfiles start.o font_psf.o font_sfn.o delays.o lfb.o main.o mbox.o uart.o -T link.ld -o kernel8.elf
+aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+dspace@mini:~/raspi_os/raspi3-tutorial/0A_pcscreenfont$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+```
+
+![実行画面](0a_screen.png)
+
+## めも
+
+- font.sfnには日本語フォントは入ってなかった（サイズからすると、main.cで指定した文字だけか）
+- とりあえずフォントの詳細は後回し
