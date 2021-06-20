@@ -6,6 +6,7 @@ src/*/build
 **/*.swp
 **/*.img
 **/*.elf
+test.dd
 # gnu global files
 GPATH
 GRTAGS

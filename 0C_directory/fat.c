@@ -33,29 +33,29 @@ static unsigned int partitionlba = 0;
 
 // the BIOS Parameter Block (in Volume Boot Record)
 typedef struct {
-    char            jmp[3];
-    char            oem[8];
-    unsigned char   bps0;
-    unsigned char   bps1;
-    unsigned char   spc;
-    unsigned short  rsc;
-    unsigned char   nf;
-    unsigned char   nr0;
-    unsigned char   nr1;
-    unsigned short  ts16;
-    unsigned char   media;
-    unsigned short  spf16;
-    unsigned short  spt;
-    unsigned short  nh;
-    unsigned int    hs;
-    unsigned int    ts32;
-    unsigned int    spf32;
-    unsigned int    flg;
-    unsigned int    rc;
-    char            vol[6];
-    char            fst[8];
-    char            dmy[20];
-    char            fst2[8];
+    char            jmp[3];     //  0 = 0x00
+    char            oem[8];     //  3 = 0x03
+    unsigned char   bps0;       // 11 = 0x0b
+    unsigned char   bps1;       // 12 = 0x0c
+    unsigned char   spc;        // 13 = 0x0d:
+    unsigned short  rsc;        // 14 = 0x0e: 0x0020 = 32
+    unsigned char   nf;         // 16 = 0x10: 0x02   - 2
+    unsigned char   nr0;        // 17 = 0x11: 0x00
+    unsigned char   nr1;        // 18 = 0x12: 0x00
+    unsigned short  ts16;       // 19 = 0x13
+    unsigned char   media;      // 21 = 0x15
+    unsigned short  spf16;      // 22 = 0x16
+    unsigned short  spt;        // 24 0 0x18
+    unsigned short  nh;         // 26 = 0x1a
+    unsigned int    hs;         // 28 = 0x1c
+    unsigned int    ts32;       // 32 = 0x20
+    unsigned int    spf32;      // 36 = 0x24: 0x03f8 = 1016
+    unsigned int    flg;        // 42 = 0x28
+    unsigned int    rc;         // 44 = 0x2c: 0x02
+    char            vol[6];     // 48 = 0x30
+    char            fst[8];     // 54 = 0x36
+    char            dmy[20];    // 62 = 0x3E
+    char            fst2[8];    // 82 = 0x52
 } __attribute__((packed)) bpb_t;
 
 // directory entry structure
@@ -127,21 +127,21 @@ void fat_listdirectory(void)
     fatdir_t *dir=(fatdir_t*)&_end;
     unsigned int root_sec, s;
     // find the root directory's LBA
-    root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc;
-    s = (bpb->nr0 + (bpb->nr1 << 8));
+    root_sec=((bpb->spf16?bpb->spf16:bpb->spf32)*bpb->nf)+bpb->rsc; // 1016*2+32 = 2064
+    s = (bpb->nr0 + (bpb->nr1 << 8));   // 0 + 0
     uart_puts("FAT number of root diretory entries: ");
     uart_hex(s);
     s *= sizeof(fatdir_t);
     if(bpb->spf16==0) {
         // adjust for FAT32
-        root_sec+=(bpb->rc-2)*bpb->spc;
+        root_sec+=(bpb->rc-2)*bpb->spc; 2064 + (2-2)*0
     }
     // add partition LBA
-    root_sec+=partitionlba;
+    root_sec+=partitionlba; // 0
     uart_puts("\nFAT root directory LBA: ");
-    uart_hex(root_sec);
+    uart_hex(root_sec); // 2064 = 0x810
     uart_puts("\n");
-    // load the root directory
+    // load the root directory: 0x810 * 0x200 = 0x102000q
     if(sd_readblock(root_sec,(unsigned char*)&_end,s/512+1)) {
         uart_puts("\nAttrib Cluster  Size     Name\n");
         // iterate on each entry and print out
