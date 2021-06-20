@@ -134,7 +134,7 @@ void fat_listdirectory(void)
     s *= sizeof(fatdir_t);
     if(bpb->spf16==0) {
         // adjust for FAT32
-        root_sec+=(bpb->rc-2)*bpb->spc; 2064 + (2-2)*0
+        root_sec+=(bpb->rc-2)*bpb->spc; // 2064 + (2-2)*0
     }
     // add partition LBA
     root_sec+=partitionlba; // 0
@@ -142,7 +142,7 @@ void fat_listdirectory(void)
     uart_hex(root_sec); // 2064 = 0x810
     uart_puts("\n");
     // load the root directory: 0x810 * 0x200 = 0x102000q
-    if(sd_readblock(root_sec,(unsigned char*)&_end,s/512+1)) {
+    if(sd_readblock(root_sec,(unsigned char*)&_end,s/512+2)) {
         uart_puts("\nAttrib Cluster  Size     Name\n");
         // iterate on each entry and print out
         for(;dir->name[0]!=0;dir++) {
