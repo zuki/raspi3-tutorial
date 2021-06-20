@@ -1,4 +1,5 @@
 backup/*
+sdcard/*
 src/*/build
 **/*.o
 **/*.d
