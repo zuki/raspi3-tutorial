@@ -39,8 +39,10 @@ void main()
         if(fat_getpartition()) {
             // find out file in root directory entries
             cluster=fat_getcluster("LICENC~1BRO");
-            if(cluster==0)
+            if(cluster==0) {
+                uart_puts("Not found LICENC~1BRO");
                 cluster=fat_getcluster("KERNEL8 IMG");
+            }
             if(cluster) {
                 // read into memory
                 uart_dump(fat_readfile(cluster));

@@ -139,7 +139,7 @@ unsigned int fat_getcluster(char *fn)
     // add partition LBA
     root_sec+=partitionlba;
     // load the root directory
-    if(sd_readblock(root_sec,(unsigned char*)dir,s/512+1)) {
+    if(sd_readblock(root_sec,(unsigned char*)dir,s/512+2)) {
         // iterate on each entry and check if it's the one we're looking for
         for(;dir->name[0]!=0;dir++) {
             // is it a valid entry?
@@ -213,4 +213,3 @@ char *fat_readfile(unsigned int cluster)
     }
     return (char*)data;
 }
-
