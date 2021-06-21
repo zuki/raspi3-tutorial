@@ -48,18 +48,18 @@ _start:
     cmp     x0, #12
     bne     5f
     // should never be executed, just for completeness
-    mov     x2, #0x5b1
+    mov     x2, #0x5b1      // EL1はnon-secure
     msr     scr_el3, x2
     mov     x2, #0x3c9
-    msr     spsr_el3, x2
+    msr     spsr_el3, x2    // mask DAIF, el2h
     adr     x2, 5f
-    msr     elr_el3, x2
+    msr     elr_el3, x2     // リターンアドレス指定
     eret
 
     // running at EL2?
 5:  cmp     x0, #4
-    beq     5f
-    msr     sp_el1, x1
+    beq     5f              // 既にEL1なら何もしない
+    msr     sp_el1, x1      // EL2ならEL1に移行する準備をする
     // enable CNTP for EL1
     mrs     x0, cnthctl_el2
     orr     x0, x0, #3
@@ -72,9 +72,9 @@ _start:
     mrs     x0, hcr_el2
     // change execution level to EL1
     mov     x2, #0x3c4
-    msr     spsr_el2, x2
+    msr     spsr_el2, x2        // mask DAIF, elf1t
     adr     x2, 5f
-    msr     elr_el2, x2
+    msr     elr_el2, x2         // リターンアドレス指定
     eret
 
 5:  mov     sp, x1
