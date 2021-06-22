@@ -1,8 +1,8 @@
-Tutorial 12 - Printf
-====================
+# チュートリアル12 - printf
 
-Before we can improve our exception handler, we are going to need some functions very well known from the C library.
-Since we are programming bare metal, we don't have libc, therefore we have to implement printf() on our own.
+例外ハンドラを改良するにはCライブラリの有名な関数のいくつかが必要に
+なります。私たちはベアメタルでプログラムをしているので、libcはありません。
+そのため、printf()を自分で実装する必要があります。
 
 ```sh
 $ qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
@@ -11,32 +11,53 @@ This is character 'A', a hex number: 7FFF and in decimal: 32767
 Padding test: '00007FFF', '    -123'
 ```
 
-Sprintf.h, sprintf.c
---------------------
+## sprintf.h, sprintf.c
 
-The interesting part. We heavily rely on our compiler's features to handle variable length argument list. As usual
-in these tutorials, it's not a fully featured, but rather a bare minimum implementation. Supports '%s', '%c',
-'%d' and '%x'. Padding is limited, only right alignment with leading zeros for hex and spaces for decimal.
+興味深い部分です。ここでは可変長引数リストを扱うためにコンパイラの機能に
+大きく依存しています。いつものチュートリアルと同じように、この関数は完全な
+機能は持っておらず、最低限の実装になっています。'%s', '%c', '%d',  '%x'を
+サポートしています。パディングには制限があり、16進数は先頭ゼロ詰め、
+10進数は先頭空白詰めの右揃えのみです。
 
-`sprintf(dst, fmt, ...)` same as printf, but stores result in a string
+`sprintf(dst, fmt, ...)`は、printfと同じですが、結果を文字列で保存します。
 
-`vsprintf(dst, fmt, va)` a variant that receives an argument list parameter instead of a variable length list of arguments.
+`vsprintf(dst, fmt, va)`は、可変長の引数リストではなく、引数リストのパラ
+メータを受け取るバリアントです。
 
 
-Uart.h, uart.c
--------------
+## uart.h, uart.c
 
-`printf(fmt, ...)` the good old C library function. Uses the sprintf function above and then outputs the string
-in the same way as uart_puts() did. Since we have '%x', uart_hex() became unnecessary, therefore removed.
+`printf(fmt, ...)`は、古き良きCライブラリ関数です。上のsprintf関数を使用
+して、uart_puts()と同じ方法で文字列を出力しています。'%x'をサポートしたので。
+uart_hex()は不要となり、削除しました。
 
-Start
------
+## start
 
-Although we are not going to use floats and doubles, gcc built-ins might. So we have to enable the FPU
-coprocessor to avoid "undefined instruction" exceptions. Also, in a lack of a proper exception handler,
-we have a dummy `exc_handler` stub this time.
+私たちは浮動小数点や倍精度整数を使用しませんが，gccの組み込み関数が使用する
+可能性があります。そのため、「未定義命令」という例外を回避するためにFPU
+コプロセッサを有効にする必要があります。また、適切な例外ハンドラを作って
+いないので、今回はダミーの`exc_handler`スタブを用意しました。
 
-Main
-----
+## main
 
-We test our printf implementation.
+printfの実装をテストします。
+
+## 実行結果
+
+```
+$ make
+rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -fno-stack-protector -nostdinc -nostdlib -nostartfiles -c start.S -o start.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -fno-stack-protector -nostdinc -nostdlib -nostartfiles -c main.c -o main.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -fno-stack-protector -nostdinc -nostdlib -nostartfiles -c mbox.c -o mbox.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -fno-stack-protector -nostdinc -nostdlib -nostartfiles -c sprintf.c -o sprintf.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -fno-stack-protector -nostdinc -nostdlib -nostartfiles -c uart.c -o uart.o
+aarch64-none-elf-ld -nostdlib -nostartfiles start.o main.o mbox.o sprintf.o uart.o -T link.ld -o kernel8.elf
+aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+
+$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+Hello World!
+This is character 'A', a hex number: 7FFF and in decimal: 32767
+Padding test: '00007FFF', '    -123'
+```
