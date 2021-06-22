@@ -1,55 +1,113 @@
-Tutorial 10 - Virtual Memory
-============================
+# チュートリアル10 - 仮想記憶
 
-We came to the simplest and most difficult tutorial at the same time. It's simple as all we are going to do
-is fill up an array, and set some registers. The difficulty lies in knowing what values should we put in that array.
+最も簡単で、かつ最も難しいチュートリアルにやってきました。やるべきことは配列を
+埋め、いくつかのレジスタを設定するだけなので簡単です。難しいのは、その配列に
+どんな値を入れるべきかを知ることです。
 
-I assume you have a fair knowledge about page translation mechanism on AMD64. If not, I strongly suggest to
-do some tutorial on it before you continue. ARMv8's MMU is much much more complex and featureful than it's AMD64
-counterpart. It is definitely not good to start with.
+ここでは皆さんがAMD64のページ変換機構について十分な知識を持っていると仮定します。
+そうでなければ、先に進む前にそれに関するチュートリアルを受けることを強く勧めます。
+ARMv8のMMUはAMD64のMMUよりもはるかに複雑で多機能です。ARMv８(から始めるのは絶対に
+良くありません。
 
-As AMD64's address translation is very simple, it has one paging table register, it splits memory into 4k
-pages only with 4 levels, and it has one well defined hole in the address space. ARMv8 is much more powerful. You
-can set the size of the pageframe, the number of translation levels, you can concatenate translation tables for a
-given level, and you can even configure the hole's size. It is impossible to cover all of these in one tutorial.
-Therefore what I'm going to do is configuring ARMv8 MMU to be similar to AMD64's as much as possible. That is:
-we're going to use 4k pageframes with 2M blocks and 512G address space (3 levels) with the 4th level in two registers.
-Think of it this way: on AMD64 you would have a 4th level table, pointed by CR3. On ARMv8, we have TTBR0 register which
-holds the first entry of that 4th level table, and TTBR1 which holds the last, 512th entry of the table, therefore we
-don't need the 4th level table at all. Everything between (memory mapped by the 2nd-511th entries) is in the hole, with
-other words they are non-canonical addresses.
+AMD64のアドレス変換は非常にシンプルで、ページングテーブルレジスタが一つあり、
+メモリは4レベルの4kページに分割され、アドレス空間には明確に定義された穴が一つ
+あります。ARMv8はずっと強力です。ページフレームのサイズ、変換レベルの数を設定
+でき、あるレベルの変換テーブルを連結することができ、さらには穴のサイズさえも
+設定できます。これらすべてを一回のチュートリアルでカバーするのは不可能です。
+そこで今回は、ARMv8のMMUをできるだけAMD64のMMUと同じになるように設定します。
+つまり、4Kページフレームで2Mブロックと512Gのアドレス空間（3レベル）を構成し、
+第4レベルは2つのレジスタに置きます。これを次のように考えます。AMD64では
+CR3により参照される第4レベルのテーブルがありますが、ARMv8では、第4レベルの
+テーブルの最初のエントリを保持するTTBR0レジスタとテーブルの最後の512番目の
+エントリを保持するTTBR1があるので第4レベルのテーブルは不要となり、その間の
+すべて（2番目から511番目のエントリでマッピングされるメモリ）は穴の中にある、
+言い換えれば、それらは非カノニカルアドレスであると考えます。
 
-The page translation table looks the same: we have 64 bit entries with a physical address and attribute bits in it
-at each level. But in ARMv8 you have far more options. You can set cacheability, shareability and accessibility as
-well. You also have a special register holding a page attribute array, and you index that with bits in the page
-translation attributes.
+ページ変換テーブルは同じように見えます。各レベルには物理アドレスと属性ビットを
+持つ64ビットのエントリがあります。しかし、ARMv8でははるかに多くのオプションが
+あります。キャッシュ可能性、共有可能性、アクセス可能性なども設定することが
+できます。また、ページ属性配列を保持する特別なレジスタがあり、ページ変換属性の
+ビットでそれをインデックス化することができます。
 
-We are going to translate virtual address space as follows: lower half will be identity mapped in 2M blocks, except
-the first block which will be mapped by 4k frames. In the higher half, at -2M we will map the MMIO of UART0.
+仮想アドレス空間を次のように変換します。下半分は、4kフレームでマッピングする
+最初のブロックを除いて、2Mブロックで恒等マッピングします。上半分の-2Mには
+UART0のMMIOをマッピングします。
 
-Maybe it's not obvious, but the translation tree can point to individual pages. This would be a nightmare to handle
-in C, therefore we do a little trick here. We use only one contiguous memory area for all the translation tables, and
-we access them with a single `paging` array. Because we choose 4k as page size, and one translation entry is 8 bytes,
-that means we have 512 entries on each page. Therefore indeces 0..511 belong to the first page, 512..1023 to the
-second and so forth. With other words, the address of paging[0] equals to _end (first page), and paging[512] equals to
-_end + PAGESIZE (second page).
+あまり明らかではないかもしれませんが、変換ツリーは個々のページを指し示すことが
+できます。ただし、これをC言語で処理するのは悪夢のようなことなので、ここでは
+ちょっとした工夫をします。1つの連続したメモリ領域を使ってすべての変換テーブルを
+作成し、1つの"paging"配列でアクセスするようにします。ページサイズとして4kを
+選択し、1つの変換エントリは8バイトであるため、各ページには512エントリがある
+ことになります。したがって、インデックス0～511は第1ページに、512～1023は
+第2ページにあることになります。言い換えれば、paging[0]のアドレスは`_end`
+(第1ページ)、paging[512]のアドレスは`_end + PAGESIZE`(第2ページ目)に等しい
+ことになります。
 
-Mmu.h, mmu.c
-------------
+## mmu.h, mmu.c
 
-`mmu_init()` function to initialize Memory Management Unit. Here we set up the paging array and we tell the CPU to use it.
+`mmu_init()`は、メモリ管理ユニットを初期化する関数です。peging配列を設定し、それを
+使用するようCPUに伝えます。
 
-Start
------
+## start
 
-This time we also have to grant access to the system control register.
+今回もシステム制御レジスタへのアクセス権限を与える必要があります。
 
-Link.ld
--------
+## link.ld
 
-This time we need page alignment for the data and the end label.
+今回は、dataラベルとendラベルをページアライメントにする必要があります。
 
-Main
-----
+## main
 
-We set up page translations, and then we print to the console with both identity mapped and higher half mapped MMIO.
+ページ変換を設定し、恒等マップしたMMIOと高位アドレスにマップしたMMIOの双方を
+コンソールに出力します。
+
+## 実行結果
+
+```
+$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+page 1: 0x0000000000082000
+page 2: 0x0000000000083000
+page 3: 0x0000000000084000
+page 4: 0x0000000000085000
+page 5: 0x0000000000086000
+page 6: 0x0000000000087000
+
+paging[0        ] UL1[0]  : 0x0000000000084743  // 下12ビットは属性フラグ
+paging[512+511  ] KL1[511]: 0x0000000000086703
+paging[2*512    ] UL2[0]  : 0x0000000000085743
+paging[2*512+1  ] UL2[1]  : 0x0040000000200741  // 上12ビットは属性フラグ
+paging[2*512+511] UL2[511]: 0x004000003FE00645
+paging[3*512    ] UL3[0]  : 0x0040000000000743
+paging[3*512+1]   UL3[1]  : 0x0040000000001743
+paging[3*512+511] UL3[511]: 0x00400000001FF743
+paging[4*512+511] KL2[511]: 0x0000000000087703
+paging[5*512    ] KL3[0]  : 0x004000003F201607
+
+Writing through identity mapped MMIO.
+Writing through MMIO mapped in higher half!
+```
+
+## メモ
+
+### paging配列
+
+```
+1ページ [0    -      511] : ユーザ   L1, [0]のみ割り当て
+   [0]                    : ユーザL2の先頭アドレス
+2ページ [1*512-1*512+511] : カーネル L1, [512+511]のみ割り当て
+   [511]                  : カーネルL2の先頭アドレス
+3ページ [2*512-2*512+511] : ユーザ   L2, [0-511]を割り当て
+   [2*512]                : ユーザL3の先頭アドレス
+   [2*512+1 - 2*512+511]  : 2MB-1GBの物理アドレスの恒等変換（2Mブロック）
+4ページ [3*512-3*512+511] : ユーザ   L3, [0-511]を割り当て
+   [3*512   - 3*512+511]  : 0-2MBの物理アドレスの恒等変換
+5ページ [4*512-4*512+511] : カーネル L2, [4*512+511]のみ割り当て
+   [4*512+511]            : カーネルL3の先頭アドレス
+6ページ [5*512-5*512+511] : カーネル L3, [5*512]のみ割り当て
+   [5*512]                : MMIO_BASE+0x00201000: UART0のベースアドレス
+```
+
+## 参考資料
+
+- [ARM AArch64のMMU](https://qiita.com/eggman/items/a8862d165cc0b4965f70)

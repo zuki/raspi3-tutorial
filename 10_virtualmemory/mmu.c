@@ -61,8 +61,8 @@ void mmu_init()
     unsigned long r, b, *paging=(unsigned long*)&_end;
 
     /* create MMU translation tables at _end */
-
-    // TTBR0, identity L1
+    /* _endの位置にMMU変換テーブルを作成 */
+    // TTBR0, 恒等 L1 identity L1
     paging[0]=(unsigned long)((unsigned char*)&_end+2*PAGESIZE) |    // physical address
         PT_PAGE |     // it has the "Present" flag, which must be set, and we have area in it mapped by pages
         PT_AF |       // accessed flag. Without this we're going to have a Data Abort exception
@@ -70,7 +70,7 @@ void mmu_init()
         PT_ISH |      // inner shareable
         PT_MEM;       // normal memory
 
-    // identity L2, first 2M block
+    // 恒等L2、最初の２Mブロック identity L2, first 2M block
     paging[2*512]=(unsigned long)((unsigned char*)&_end+3*PAGESIZE) | // physical address
         PT_PAGE |     // we have area in it mapped by pages
         PT_AF |       // accessed flag
@@ -78,9 +78,9 @@ void mmu_init()
         PT_ISH |      // inner shareable
         PT_MEM;       // normal memory
 
-    // identity L2 2M blocks
+    // 恒等L2 2Mブロック identity L2 2M blocks
     b=MMIO_BASE>>21;
-    // skip 0th, as we're about to map it by L3
+    // インデックス0はスキップする。L3によりマッピングされるため skip 0th, as we're about to map it by L3
     for(r=1;r<512;r++)
         paging[2*512+r]=(unsigned long)((r<<21)) |  // physical address
         PT_BLOCK |    // map 2M block
@@ -89,7 +89,7 @@ void mmu_init()
         PT_USER |     // non-privileged
         (r>=b? PT_OSH|PT_DEV : PT_ISH|PT_MEM); // different attributes for device memory
 
-    // identity L3
+    // 恒等L3 identity L3
     for(r=0;r<512;r++)
         paging[3*512+r]=(unsigned long)(r*PAGESIZE) |   // physical address
         PT_PAGE |     // map 4k
@@ -98,7 +98,7 @@ void mmu_init()
         PT_ISH |      // inner shareable
         ((r<0x80||r>=data_page)? PT_RW|PT_NX : PT_RO); // different for code and data
 
-    // TTBR1, kernel L1
+    // TTBR1, カーネル L1 kernel L1
     paging[512+511]=(unsigned long)((unsigned char*)&_end+4*PAGESIZE) | // physical address
         PT_PAGE |     // we have area in it mapped by pages
         PT_AF |       // accessed flag
@@ -106,7 +106,7 @@ void mmu_init()
         PT_ISH |      // inner shareable
         PT_MEM;       // normal memory
 
-    // kernel L2
+    // カーネル L2 kernel L2
     paging[4*512+511]=(unsigned long)((unsigned char*)&_end+5*PAGESIZE) |   // physical address
         PT_PAGE |     // we have area in it mapped by pages
         PT_AF |       // accessed flag
@@ -114,7 +114,7 @@ void mmu_init()
         PT_ISH |      // inner shareable
         PT_MEM;       // normal memory
 
-    // kernel L3
+    // カーネル L3 kernel L3
     paging[5*512]=(unsigned long)(MMIO_BASE+0x00201000) |   // physical address
         PT_PAGE |     // map 4k
         PT_AF |       // accessed flag
@@ -122,6 +122,57 @@ void mmu_init()
         PT_KERNEL |   // privileged
         PT_OSH |      // outter shareable
         PT_DEV;       // device memory
+
+    for (int i = 0; i<6; i++) {
+        b = (unsigned long)((unsigned char*)&_end+i*PAGESIZE);
+        uart_puts("page ");
+        uart_send(i+'1');
+        uart_puts(": 0x");
+        uart_hex(b >> 32);
+        uart_hex(b & 0xffffffff);
+        uart_send('\n');
+    }
+
+    uart_puts("\npaging[0        ] UL1[0]  : 0x");
+    uart_hex(paging[0] >> 32);
+    uart_hex(paging[0] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[512+511  ] KL1[511]: 0x");
+    uart_hex(paging[512+511] >> 32);
+    uart_hex(paging[512+511] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[2*512    ] UL2[0]  : 0x");
+    uart_hex(paging[2*512] >> 32);
+    uart_hex(paging[2*512] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[2*512+1  ] UL2[1]  : 0x");
+    uart_hex(paging[2*512+1] >> 32);
+    uart_hex(paging[2*512+1] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[2*512+511] UL2[511]: 0x");
+    uart_hex(paging[2*512+511] >> 32);
+    uart_hex(paging[2*512+511] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[3*512    ] UL3[0]  : 0x");
+    uart_hex(paging[3*512] >> 32);
+    uart_hex(paging[3*512] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[3*512+1]   UL3[1]  : 0x");
+    uart_hex(paging[3*512+1] >> 32);
+    uart_hex(paging[3*512+1] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[3*512+511] UL3[511]: 0x");
+    uart_hex(paging[3*512+511] >> 32);
+    uart_hex(paging[3*512+511] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[4*512+511] KL2[511]: 0x");
+    uart_hex(paging[4*512+511] >> 32);
+    uart_hex(paging[4*512+511] & 0xffffffff);
+    uart_send('\n');
+    uart_puts("paging[5*512    ] KL3[0]  : 0x");
+    uart_hex(paging[5*512] >> 32);
+    uart_hex(paging[5*512] & 0xffffffff);
+    uart_send('\n');
 
     /* okay, now we have to set system registers to enable MMU */
 
