@@ -38,7 +38,7 @@ void exc_handler(unsigned long type, unsigned long esr, unsigned long elr, unsig
         case 3: uart_puts("SError"); break;
     }
     uart_puts(": ");
-    // decode exception type (some, not all. See ARM DDI0487B_b chapter D10.2.28)
+    // decode exception type (some, not all. See ARM DDI0487B_b chapter D10.2.37)
     switch(esr>>26) {
         case 0b000000: uart_puts("Unknown"); break;
         case 0b000001: uart_puts("Trapped WFI/WFE"); break;
