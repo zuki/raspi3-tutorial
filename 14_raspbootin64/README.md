@@ -1,51 +1,122 @@
-Tutorial 14 - Raspbootin64
-==========================
+# チュートリアル 14 - Raspbootin64
 
-Because changing SD card is boring and also to avoid potential SD card damage, we create a kernel8.img that will
-load the real kernel8.img over serial.
+SDカードを交換するのは面倒だし、SD カードの破損を避けるためにも、シリアル
+経由で本物のkernel8.imgをロードするkernel8.imgを作成します。
 
-This tutorial is a rewrite of the well known serial boot loader, [raspbootin](https://github.com/mrvn/raspbootin) in 64 bit.
-I only provide one part of the loader, the kernel receiver, which runs on the RPi. For the other
-part, the sender, which runs on your PC see the original [raspbootcom](https://github.com/mrvn/raspbootin/blob/master/raspbootcom/raspbootcom.cc) utility.
-If you want to send kernels from Windows or MacOSX machines, or you just prefer GUI application, then I suggest to use
-[USBImager](https://gitlab.com/bztsrc/usbimager) application with the `-S` (uppercase) flag. Even more, [@milanvidakovic](https://github.com/milanvidakovic)
-was kind to share a [Java version](https://github.com/milanvidakovic/Raspbootin64Client) of the kernel sender with you
-(don't let the name fool you, this is actually the server part, never mind the name).
+このチュートリアルは、有名なシリアルブートローダである[raspbootin](https://github.com/mrvn/raspbootin)を
+64bitで書き直したものです。私が提供するのはローダの半分のRPi上で動作する
+カーネル受信機だけです。もう半分のPC上で動作する送信側については、オリジナルの
+[raspbootcom](https://github.com/mrvn/raspbootin/blob/master/raspbootcom/raspbootcom.cc)
+ユーティリティを参照してください。WindowsやMacOSXからカーネルを送信したい場合や
+GUIアプリケーションが好きな場合は[USBImager](https://gitlab.com/bztsrc/usbimager)
+アプリケーションに`-S`(大文字のS)フラグを付けて使用することを勧めます。さらに、
+[@milanvidakovic](https://github.com/milanvidakovic)は親切にもJavaバージョンの
+カーネル送信機のを共有してくれました（名前に惑わされないでください、これは
+実際にサーバ部分です、名前は気にしないでください）。
 
-In order to load the new kernel to the same address, we have to move ourself out of the way. It's called chain
-loading: one code loads the next code to the same position in memory, therefore the latter thinks it was loaded
-by the firmware. To implement that we use a different linking address this time, and since GPU loads us to 0x80000
-regardless, we have to copy our code to that link address. When we're done, the memory at 0x80000 must be free to use.
+新しいカーネルを同じアドレスにロードするには、自分自身を邪魔にならないように
+移動させる必要があります。これはチェインローディングと呼ばれるもので、ある
+コードが次のコードをメモリの同じ位置にロードすることです。つまり、後者が
+ファームウェアによってロードされると考えるのです。これを実装するために、
+これまでとは異なるリンクアドレスを使用します。GPUはお構いなしに0x80000に
+ロードするので、私たちはコードをそのリンクアドレスにコピーする必要があります。
+コピーが終わったら、0x80000のメモリは自由に使えるようにしなければなりません。
 
-We also should minimize the size of the loader, since it will be regarded by the newly loaded code anyway.
-By removing `uart_puts()` and other functions, I've managed to shrink the loader's size below 1024 bytes. This
-way I can assure that link address 0x80000 - 1024 will be suitable, and our loader code won't overlap with
-the load address. You can check that with:
+また、ローダのサイズは最小限にする必要があります。なぜなら、それはいずれにせよ
+新しくロードされるコードだとみなされるからです。`uart_puts()`などの関数を削除
+することで、ローダのサイズを1024バイト以下にすることができました。これにより、
+リンクアドレス(0x80000 - 1024)が適切であり、ローダのコードがロードアドレスを
+超えないことを保証することができました。これは次のように確認できます。
 
 ```sh
 $ aarch64-elf-readelf -s kernel8.elf | grep __bss_end
     27: 000000000007ffb0     0 NOTYPE  GLOBAL DEFAULT    4 __bss_end
 ```
 
-Start
------
+## start
 
-We have to save the arguments in registers passed by the firmware. Added a loop to relocate our code to the
-address it should have been loaded to. And last, since gcc generates RIP-relative jumps, we must adjust the
-branch instruction to jump to the relocated C code.
+ファームウェアから渡される引数をレジスタに保存する必要があります。本来
+ロードされるべきアドレスにコードを再配置するためのループを追加しました。
+最後に、gccはRIP相対ジャンブを生成するので、再配置されたCコードにジャンプ
+するように分岐命令を調整する必要があります。
 
-Thanks to [@mrvn](https://github.com/mrvn) for noticing running a non-relocated spin-loop would be very bad.
-Because of a change in the firmware, this code runs only on the BSP, that's why it didn't caused trouble and
-that's why nobody noticed.
+再配置されていないスピンループを実行すると非常にまずいことに気付いた
+[@mrvn](https://github.com/mrvn)さんに感謝します。ファームウェアの変更により、
+このコードはBSP上でのみ実行されるようになったため問題が発生せず、誰も
+気づきませんでした。
 
-Linker
-------
+## linker
 
-We use a different linking address this time. Similarly to bss size calculation, we calculate our code's size to
-know how many bytes we have to copy.
+今回は異なるリンクアドレスを使用しています。bssのサイズ計算と同じように、
+コードのサイズを計算して、コピーが必要なバイト数を把握します。
 
-Main
-----
+## main
 
-We print 'RBIN64', receive the new kernel over serial and save it at the memory address where the start.elf would
-have loaded it. When finished, we restore the arguments and jump to the new kernel using an absolute address.
+"RBIN64"と表示し、シリアル経由で新しいカーネルを受け取り、start.elfがロード
+されるはずだったメモリアドレスに保存します。それが終わったら、引数を復元し、
+絶対アドレスを使って新しいカーネルにジャンプします。
+
+## 実行結果
+
+```
+$ make
+rm kernel8.elf *.o >/dev/null 2>/dev/null || true
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c start.S -o start.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c main.c -o main.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c mbox.c -o mbox.o
+aarch64-none-elf-gcc -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles -c uart.c -o uart.o
+aarch64-none-elf-ld -nostdlib -nostartfiles start.o main.o mbox.o uart.o -T link.ld -o kernel8.elf
+aarch64-none-elf-objcopy -O binary kernel8.elf kernel8.img
+dspace@mini:~/raspi_os/raspi3-tutorial/14_raspbootin64$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+RBIN64
+```
+
+### QEMUのserialを送信機にどうつなぐかが、今のところ不明
+
+
+
+- qemuのシリアルをptyに接続
+
+```
+$ qemu-system-aarch64 -M raspi3 -kernel kernel8.img -chardev pty,id=pty0 -serial chardev:pty0
+char device redirected to /dev/ttys003 (label pty0)
+```
+
+#### 1. aspbootcomを使用
+
+- 送信している様子はない。
+
+```
+$ ./raspbootcom /dev/ttys003 ../../raspi3-tutorial/13_debugger/kernel8.img
+Raspbootcom V1.0
+### Listening on /dev/ttys003
+```
+
+#### 2. USBImagerを使用
+
+- 画面でデバイスを選択できない。
+- コマンドラインで指定してもだめ。
+- そもそもラーが出ているが。[stack overflow](https://stackoverflow.com/questions/46999695/class-fifindersyncextensionhost-is-implemented-in-both-warning-in-xcode-si)に
+  解決策と思われる記事があるがpythonのよう。要調査。
+
+```
+$ ./usbimager -S /dev/ttys003
+2021-06-23 15:07:40.702 usbimager[7274:63164] get 0x0
+objc[7274]: Class FIFinderSyncExtensionHost is implemented in both /System/Library/PrivateFrameworks/FinderKit.framework/Versions/A/FinderKit (0x7fffa52143f0) and /System/Library/PrivateFrameworks/FileProvider.framework/OverrideBundles/FinderSyncCollaborationFileProviderOverride.bundle/Contents/MacOS/FinderSyncCollaborationFileProviderOverride (0x8fd3f50). One of the two will be used. Which one is undefined.
+```
+
+### [issue#53](https://github.com/bztsrc/raspi3-tutorial/issues/53)が該当すると
+思われるが、以下の通り実行しても結果は同じ。
+
+```
+$ make run
+```
+
+別ターミナルで、
+
+```
+$ ps aux | grep qemu
+$ lsof -p qemuプロセスID | grep dev
+$ ./raspbootcom /dev/ttys00? ../../raspi3-tutorial/13_debugger/kernel8.img
+```
