@@ -89,8 +89,8 @@ _start:
     adr     x2, 5f
     msr     elr_el2, x2
     // clear EL1 system registers
-    msr     elr_el1, xzr
-    msr     far_el1, xzr
+    msr     elr_el1, xzr    // return address をクリア
+    msr     far_el1, xzr    // fault address をクリア
     eret
 
 5:  mov     sp, x1
@@ -113,7 +113,8 @@ dbg_saveregs:
     str     x0, [sp, #-16]!     // push x0
     ldr     x0, =dbg_regs+8
     str     x1, [x0], #8        // dbg_regs[1]=x1
-    ldr     x1, [sp, #16]       // pop x1
+    //ldr     x1, [sp, #16]       // pop x1 (=x30)
+    ldr     x1, [sp]            // pop x1 (=x0)
     str     x1, [x0, #-16]!     // dbg_regs[0]=x1 (x0)
     add     x0, x0, #16
     str     x2, [x0], #8        // dbg_regs[2]=x2
@@ -167,6 +168,8 @@ _vectors:
     // synchronous
     .align  7
     str     x30, [sp, #-16]!     // push x30
+    //movz    x0, #0xbeef
+    //movk    x0, #0xdead, LSL #16
     bl      dbg_saveregs
     mov     x0, #0
     bl      dbg_decodeexc

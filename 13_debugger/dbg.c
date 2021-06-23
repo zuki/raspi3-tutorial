@@ -121,7 +121,7 @@ void dbg_getline()
     // read until Enter pressed
     while((c=uart_getc())!='\n') {
         // decode CSI key sequences (some, not all)
-        if(c==27) {
+        if(c==27) {     // 27 = Esc
             c=uart_getc();
             if(c=='[') {
                 c=uart_getc();
