@@ -120,3 +120,33 @@ $ ps aux | grep qemu
 $ lsof -p qemuプロセスID | grep dev
 $ ./raspbootcom /dev/ttys00? ../../raspi3-tutorial/13_debugger/kernel8.img
 ```
+
+### 現状の問題点
+
+- qemuを実行するとそのターミナルの/dev/ttysxxxもオープンする。
+- したがって、rasbootcomでそのdevを指定すれば良いように思える。
+- 問題は両者の実行タイミングで、qemuを先に実行するとbootcomを実行した時には
+  すでに'\c\c\c'は送信済みで受け取ることができない。
+- bootcomを先に実行しようとすると`error on device`でコンソールが落ちてしまう。
+
+#### 対策1: qemuで実行後数秒待ってから送信を行う。その間にbootcomを立ち上げる
+
+結果は同じで、bootcomは受信しない。
+
+#### 対策2: bootcomから'READY’を送り、qemuはこれを受け取ってから送信を行う。
+
+qemuにデータは届いたが、プログラムにデータが渡らない。
+
+```
+$ ./raspbootcom /dev/ttys000 ../../raspi3-tutorial/13_debugger/kernel8.img
+Raspbootcom V1.0 - BOOTBOOT version
+
+### Listening on /dev/ttys000
+write RD
+```
+
+```
+$ make run
+qemu-system-aarch64 -M raspi3 -kernel kernel8.img -serial stdio
+RD
+```
