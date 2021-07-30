@@ -13,8 +13,8 @@
 
 `sd_init()`は、SDカードを読み込むためのEMMCの初期化を行います。
 
-`sd_readblock(lba,buffer,num)`は、SDカードからnumブロック（セクタ）を
-セクタlbaから始まるbufferに読み込みます。
+`sd_readblock(lba,buffer,num)`は、SDカードのセクタlbaからnumブロック
+（セクタ）をbufferに読み込みます。
 
 ## main
 
