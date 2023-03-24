@@ -14,8 +14,8 @@ CPUコアを停止させることですが、今回はそのうちの1つをC言
 
 注: ファームウェアのバージョンによっては、アプリケーションコアが停止している場合があります。
 その場合、私たちのコードはコア0でしか動作しませんが、コア番号を確認しても害はありません。
-他のコアを起動するには、0xE0、0xE8、0xF0で実行する関数のアドレス（この順でコアごとに1アドレス）を
-記述する必要があります。[armstub8.S](https://github.com/raspberrypi/tools/blob/master/armstubs/armstub8.S#L129)を
+他のコアを起動するには、実行する関数のアドレスを0xE0、0xE8、0xF0（この順でコアごとに1アドレス）に
+書き込む必要があります。[armstub8.S](https://github.com/raspberrypi/tools/blob/master/armstubs/armstub8.S#L129)を
 参照してください。
 
 ## Makefile
