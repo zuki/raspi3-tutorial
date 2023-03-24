@@ -27,6 +27,9 @@ SRCS = $(wildcard *.c)
 OBJS = $(SRCS:.c=.o)
 CFLAGS = -Wall -O2 -ffreestanding -nostdinc -nostdlib -nostartfiles
 
+EXEC_MINIPUSH = ruby ../utils/minipush.rb
+DEV_SERIAL = /dev/cu.usbserial-AI057C9L
+
 all: clean kernel8.img
 
 start.o: start.S
@@ -44,3 +47,6 @@ clean:
 
 run:
 	qemu-system-aarch64 -M raspi3 -kernel kernel8.img -drive file=test.dd,if=sd,format=raw -serial stdio
+
+chainboot: kernel8.img
+	@$(EXEC_MINIPUSH) $(DEV_SERIAL) $<
