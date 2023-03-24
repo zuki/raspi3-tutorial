@@ -42,7 +42,15 @@ extern volatile unsigned int mbox[36];
 /* tags */
 #define MBOX_TAG_GETSERIAL      0x10004
 #define MBOX_TAG_GETMODEL       0x10001
+#define MBOX_TAG_GETREVISION    0x10002
 #define MBOX_TAG_GETMEMORY      0x10006
+#define MBOX_TAG_GETCLOCKSTATE  0x30001
+#define MBOX_TAG_GETCLOCKRATE   0x30002
+#define MBOX_TAG_GETCLOCKRATEMS 0x30047
+#define MBOX_TAG_SETCLOCKRATE   0x38002
+#define MBOX_TAG_GETPOWERSTATE  0x20001
+#define MBOX_TAG_SETPOWERSTATE  0x28001
 #define MBOX_TAG_LAST           0
 
 int mbox_call(unsigned char ch);
+unsigned int mbox_read(unsigned char ch);
