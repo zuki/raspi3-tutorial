@@ -47,7 +47,7 @@ initrdのアドレスはが関数から*返されます*。
 するためにこの方法を使用します。initrdにはラベル *_binary_ramdisk_start* でアクセス
 できます。
 
-訳注: `ld -r -b type -d file.o file`とすると`_type_file_start`, `_type_file_end`,
+訳注: `ld -r -b type -o file.o file`とすると`_type_file_start`, `_type_file_end`,
 `_type_file_size`の3つのシンボルが作成される。
 
 ## Makefile
